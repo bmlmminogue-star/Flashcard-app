@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Modern Flashcard SRS</title>
+  <style>
+    :root {
+      --bg: #f2f2f7; --card-bg: #ffffff; --text: #1c1c1e;
+      --subtext: #8e8e93; --accent: #007aff; --border: #e5e5ea;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #000000; --card-bg: #1c1c1e; --text: #ffffff;
+        --subtext: #8e8e93; --accent: #0a84ff; --border: #38383a;
+      }
+    }
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: var(--bg); color: var(--text); margin: 0; padding: 20px 16px; max-width: 500px; margin: 0 auto; }
+    
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .header h1 { font-size: 22px; margin: 0; font-weight: 700; }
+    .streak { background: var(--card-bg); border: 1px solid var(--border); padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; color: #ff9500; }
+
+    .input-card { background: var(--card-bg); border-radius: 16px; padding: 12px; display: flex; gap: 8px; margin-bottom: 20px; border: 1px solid var(--border); }
+    input[type="text"] { flex: 1; border: none; background: transparent; font-size: 16px; color: var(--text); outline: none; padding-left: 8px; }
+    button { border: none; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; transition: transform 0.1s ease, opacity 0.1s ease; }
+    button:active { transform: scale(0.96); opacity: 0.8; }
+    .btn-add { background: var(--accent); color: white; padding: 10px 18px; }
+
+    /* Flashcard 3D Flip Container */
+    .card-container { perspective: 1000px; height: 240px; margin-bottom: 20px; }
+    .flashcard { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 0.5s cubic-bezier(0.4, 0.2, 0.2, 1); border-radius: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.06); }
+    .flashcard.flipped { transform: rotateY(180deg); }
+    
+    .card-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 20px; background: var(--card-bg); border: 1px solid var(--border); display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 24px; text-align: center; }
+    .card-back { transform: rotateY(180deg); }
+
+    .word-title { font-size: 30px; font-weight: 700; margin: 0; }
+    .pos-tag { font-size: 13px; text-transform: uppercase; color: var(--subtext); font-weight: 700; letter-spacing: 1px; margin-bottom: 8px; }
+    .def-text { font-size: 17px; line-height: 1.4; color: var(--text); margin: 0; }
+
+    .actions { display: flex; flex-direction: column; gap: 10px; }
+    .btn-show { background: var(--card-bg); color: var(--accent); border: 1px solid var(--border); width: 100%; padding: 16px; font-size: 16px; border-radius: 14px; }
+    .btn-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .btn-again { background: #ff3b30; color: white; padding: 14px; }
+    .btn-good { background: #34c759; color: white; padding: 14px; }
+    .btn-easy { background: #5856d6; color: white; padding: 14px; }
+
+    .hidden { display: none !important; }
+    .status { text-align: center; font-size: 13px; color: var(--subtext); margin-top: 12px; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>Vocabulary SRS</h1>
+    <div id="streakDisplay" class="streak">🔥 0 Days</div>
+  </div>
+
+  <div class="input-card">
+    <input type="text" id="wordInput" placeholder="Add a new word...">
+    <button class="btn-add" onclick="addWord()">Add</button>
+  </div>
+  <div id="statusMsg" class="status"></div>
+
+  <!-- 3D Flip Card -->
+  <div class="card-container">
+    <div id="flashcard" class="flashcard">
+      <div class="card-face card-front">
+        <h2 id="frontWord" class="word-title">No cards due!</h2>
+      </div>
+      <div class="card-face card-back">
+        <div id="posTag" class="pos-tag"></div>
+        <p id="backDef" class="def-text"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="actions">
+    <button id="showBtn" class="btn-show" onclick="showAnswer()">Show Definition</button>
+    <div id="ratingBtns" class="btn-grid hidden">
+      <button class="btn-again" onclick="rateCard(1)">Again</button>
+      <button class="btn-good" onclick="rateCard(2)">Good</button>
+      <button class="btn-easy" onclick="rateCard(3)">Easy</button>
+    </div>
+  </div>
+
+  <div id="stats" class="status"></div>
+
+<script>
+  let cards = JSON.parse(localStorage.getItem('my_srs_cards') || '[]');
+  let currentCard = null;
+
+  function triggerHaptic() {
+    if (navigator.vibrate) navigator.vibrate(15);
+  }
+
+  function saveCards() {
+    localStorage.setItem('my_srs_cards', JSON.stringify(cards));
+    updateStats();
+  }
+
+  async function addWord() {
+    const input = document.getElementById('wordInput');
+    const word = input.value.trim().toLowerCase();
+    const status = document.getElementById('statusMsg');
+
+    if (!word) return;
+    status.innerText = "Searching definition...";
+
+    try {
+      const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
+      if (!res.ok) throw new Error("Word not found.");
+      
+      const data = await res.json();
+      const meaning = data[0].meanings[0];
+
+      cards.push({
+        id: Date.now(),
+        word: word,
+        pos: meaning.partOfSpeech,
+        def: meaning.definitions[0].definition,
+        dueDate: new Date().toISOString(),
+        interval: 1
+      });
+
+      saveCards();
+      status.innerText = `Added "${word}"!`;
+      input.value = '';
+      loadNextCard();
+    } catch (err) {
+      status.innerText = "Could not find definition.";
+    }
+  }
+
+  function getDueCards() {
+    const now = new Date();
+    return cards.filter(c => new Date(c.dueDate) <= now);
+  }
+
+  function loadNextCard() {
+    const due = getDueCards();
+    const cardEl = document.getElementById('flashcard');
+    const frontEl = document.getElementById('frontWord');
+    const posEl = document.getElementById('posTag');
+    const backEl = document.getElementById('backDef');
+    const showBtn = document.getElementById('showBtn');
+    const ratingBtns = document.getElementById('ratingBtns');
+
+    cardEl.classList.remove('flipped');
+    ratingBtns.classList.add('hidden');
+
+    if (due.length === 0) {
+      frontEl.innerText = "All done for now! 🎉";
+      showBtn.classList.add('hidden');
+      currentCard = null;
+    } else {
+      currentCard = due[0];
+      frontEl.innerText = currentCard.word;
+      posEl.innerText = currentCard.pos;
+      backEl.innerText = currentCard.def;
+      showBtn.classList.remove('hidden');
+    }
+    updateStats();
+  }
+
+  function showAnswer() {
+    triggerHaptic();
+    document.getElementById('flashcard').classList.add('flipped');
+    document.getElementById('showBtn').classList.add('hidden');
+    document.getElementById('ratingBtns').classList.remove('hidden');
+  }
+
+  function rateCard(rating) {
+    triggerHaptic();
+    if (!currentCard) return;
+
+    let mult = rating === 1 ? 1 : (rating === 2 ? 2.5 : 4.0);
+    currentCard.interval = Math.round((currentCard.interval || 1) * mult);
+    
+    const nextDate = new Date();
+    nextDate.setDate(nextDate.getDate() + (rating === 1 ? 1 : currentCard.interval));
+    currentCard.dueDate = nextDate.toISOString();
+
+    saveCards();
+    loadNextCard();
+  }
+
+  function updateStats() {
+    document.getElementById('stats').innerText = `Total Cards: ${cards.length} | Due Today: ${getDueCards().length}`;
+  }
+
+  loadNextCard();
+</script>
+</body>
+</html>
