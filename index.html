@@ -1,198 +1,329 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Modern Flashcard SRS</title>
-  <style>
-    :root {
-      --bg: #f2f2f7; --card-bg: #ffffff; --text: #1c1c1e;
-      --subtext: #8e8e93; --accent: #007aff; --border: #e5e5ea;
-    }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #000000; --card-bg: #1c1c1e; --text: #ffffff;
-        --subtext: #8e8e93; --accent: #0a84ff; --border: #38383a;
-      }
-    }
-    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background: var(--bg); color: var(--text); margin: 0; padding: 20px 16px; max-width: 500px; margin: 0 auto; }
-    
-    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-    .header h1 { font-size: 22px; margin: 0; font-weight: 700; }
-    .streak { background: var(--card-bg); border: 1px solid var(--border); padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; color: #ff9500; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vocabulary SRS</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2563eb">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --text-secondary: #64748b;
+            --border: #e2e8f0;
+            --radius: 12px;
+        }
 
-    .input-card { background: var(--card-bg); border-radius: 16px; padding: 12px; display: flex; gap: 8px; margin-bottom: 20px; border: 1px solid var(--border); }
-    input[type="text"] { flex: 1; border: none; background: transparent; font-size: 16px; color: var(--text); outline: none; padding-left: 8px; }
-    button { border: none; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; transition: transform 0.1s ease, opacity 0.1s ease; }
-    button:active { transform: scale(0.96); opacity: 0.8; }
-    .btn-add { background: var(--accent); color: white; padding: 10px 18px; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
 
-    /* Flashcard 3D Flip Container */
-    .card-container { perspective: 1000px; height: 240px; margin-bottom: 20px; }
-    .flashcard { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 0.5s cubic-bezier(0.4, 0.2, 0.2, 1); border-radius: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.06); }
-    .flashcard.flipped { transform: rotateY(180deg); }
-    
-    .card-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 20px; background: var(--card-bg); border: 1px solid var(--border); display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 24px; text-align: center; }
-    .card-back { transform: rotateY(180deg); }
+        .container {
+            width: 100%;
+            max-width: 480px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
 
-    .word-title { font-size: 30px; font-weight: 700; margin: 0; }
-    .pos-tag { font-size: 13px; text-transform: uppercase; color: var(--subtext); font-weight: 700; letter-spacing: 1px; margin-bottom: 8px; }
-    .def-text { font-size: 17px; line-height: 1.4; color: var(--text); margin: 0; }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-    .actions { display: flex; flex-direction: column; gap: 10px; }
-    .btn-show { background: var(--card-bg); color: var(--accent); border: 1px solid var(--border); width: 100%; padding: 16px; font-size: 16px; border-radius: 14px; }
-    .btn-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-    .btn-again { background: #ff3b30; color: white; padding: 14px; }
-    .btn-good { background: #34c759; color: white; padding: 14px; }
-    .btn-easy { background: #5856d6; color: white; padding: 14px; }
+        h1 {
+            font-size: 1.5rem;
+            margin: 0;
+        }
 
-    .hidden { display: none !important; }
-    .status { text-align: center; font-size: 13px; color: var(--subtext); margin-top: 12px; }
-  </style>
+        .streak {
+            background: #fff7ed;
+            color: #c2410c;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            border: 1px solid #ffedd5;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 1rem;
+            outline: none;
+            background: var(--card-bg);
+        }
+
+        input:focus {
+            border-color: var(--primary);
+        }
+
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0 20px;
+            border-radius: var(--radius);
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        button:active {
+            background: var(--primary-hover);
+        }
+
+        .card-container {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            min-height: 240px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            position: relative;
+        }
+
+        .card-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .word-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin: 0 0 8px 0;
+        }
+
+        .word-meta {
+            color: var(--text-secondary);
+            font-style: italic;
+            margin-bottom: 16px;
+            font-size: 0.95rem;
+        }
+
+        .word-definition {
+            font-size: 1.1rem;
+            line-height: 1.5;
+            color: var(--text);
+            display: none;
+        }
+
+        .card-container.revealed .word-definition {
+            display: block;
+        }
+
+        .reveal-prompt {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-top: 12px;
+        }
+
+        .card-container.revealed .reveal-prompt {
+            display: none;
+        }
+
+        .actions {
+            display: none;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-top: 20px;
+        }
+
+        .card-container.revealed .actions {
+            display: grid;
+        }
+
+        .btn-srs {
+            padding: 10px 4px;
+            font-size: 0.8rem;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+
+        .btn-again { background: #ef4444; }
+        .btn-hard { background: #f97316; }
+        .btn-good { background: #3b82f6; }
+        .btn-easy { background: #10b981; }
+
+        .stats {
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+    </style>
 </head>
 <body>
 
-  <div class="header">
-    <h1>Vocabulary SRS</h1>
-    <div id="streakDisplay" class="streak">🔥 0 Days</div>
-  </div>
+    <div class="container">
+        <header>
+            <h1>Vocabulary SRS</h1>
+            <div class="streak" id="streakCounter">🔥 0 Days</div>
+        </header>
 
-  <div class="input-card">
-    <input type="text" id="wordInput" placeholder="Add a new word...">
-    <button class="btn-add" onclick="addWord()">Add</button>
-  </div>
-  <div id="statusMsg" class="status"></div>
+        <div class="input-group">
+            <input type="text" id="wordInput" placeholder="Add a new word..." autocomplete="off">
+            <button id="addBtn">Add</button>
+        </div>
 
-  <!-- 3D Flip Card -->
-  <div class="card-container">
-    <div id="flashcard" class="flashcard">
-      <div class="card-face card-front">
-        <h2 id="frontWord" class="word-title">No cards due!</h2>
-      </div>
-      <div class="card-face card-back">
-        <div id="posTag" class="pos-tag"></div>
-        <p id="backDef" class="def-text"></p>
-      </div>
+        <div class="card-container" id="cardContainer">
+            <div class="card-content" id="cardContent">
+                <div class="empty-state">All done for now! 🎉</div>
+            </div>
+            <div class="actions" id="srsActions">
+                <button class="btn-srs btn-again" onclick="reviewCard(0)">Again</button>
+                <button class="btn-srs btn-hard" onclick="reviewCard(1)">Hard</button>
+                <button class="btn-srs btn-good" onclick="reviewCard(2)">Good</button>
+                <button class="btn-srs btn-easy" onclick="reviewCard(3)">Easy</button>
+            </div>
+        </div>
+
+        <div class="stats" id="statsDisplay">Total Cards: 0 | Due Today: 0</div>
     </div>
-  </div>
 
-  <!-- Action Buttons -->
-  <div class="actions">
-    <button id="showBtn" class="btn-show" onclick="showAnswer()">Show Definition</button>
-    <div id="ratingBtns" class="btn-grid hidden">
-      <button class="btn-again" onclick="rateCard(1)">Again</button>
-      <button class="btn-good" onclick="rateCard(2)">Good</button>
-      <button class="btn-easy" onclick="rateCard(3)">Easy</button>
-    </div>
-  </div>
+    <script>
+        let cards = JSON.parse(localStorage.getItem('srs_cards')) || [];
+        let currentCardIndex = null;
 
-  <div id="stats" class="status"></div>
+        const wordInput = document.getElementById('wordInput');
+        const addBtn = document.getElementById('addBtn');
+        const cardContainer = document.getElementById('cardContainer');
+        const cardContent = document.getElementById('cardContent');
+        const statsDisplay = document.getElementById('statsDisplay');
 
-<script>
-  let cards = JSON.parse(localStorage.getItem('my_srs_cards') || '[]');
-  let currentCard = null;
+        addBtn.addEventListener('click', addNewWord);
+        wordInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') addNewWord(); });
+        cardContainer.addEventListener('click', (e) => {
+            if (!cardContainer.classList.contains('revealed') && cards.length > 0 && currentCardIndex !== null) {
+                cardContainer.classList.add('revealed');
+            }
+        });
 
-  function triggerHaptic() {
-    if (navigator.vibrate) navigator.vibrate(15);
-  }
+        async function addNewWord() {
+            const word = wordInput.value.trim().toLowerCase();
+            if (!word) return;
 
-  function saveCards() {
-    localStorage.setItem('my_srs_cards', JSON.stringify(cards));
-    updateStats();
-  }
+            addBtn.textContent = 'Fetching...';
+            addBtn.disabled = true;
 
-  async function addWord() {
-    const input = document.getElementById('wordInput');
-    const word = input.value.trim().toLowerCase();
-    const status = document.getElementById('statusMsg');
+            let definition = "No definition found.";
+            let partOfSpeech = "";
 
-    if (!word) return;
-    status.innerText = "Searching definition...";
+            try {
+                const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const entry = data[0];
+                    partOfSpeech = entry.meanings[0]?.partOfSpeech || "";
+                    definition = entry.meanings[0]?.definitions[0]?.definition || "Definition not available.";
+                } else {
+                    definition = prompt(`Could not auto-fetch definition for "${word}". Enter definition manually:`) || "Custom word";
+                }
+            } catch (err) {
+                definition = prompt(`Network error fetching "${word}". Enter definition manually:`) || "Custom word";
+            }
 
-    try {
-      const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
-      if (!res.ok) throw new Error("Word not found.");
-      
-      const data = await res.json();
-      const meaning = data[0].meanings[0];
+            cards.push({
+                word: word,
+                definition: definition,
+                partOfSpeech: partOfSpeech,
+                interval: 0,
+                repetition: 0,
+                dueDate: Date.now()
+            });
 
-      cards.push({
-        id: Date.now(),
-        word: word,
-        pos: meaning.partOfSpeech,
-        def: meaning.definitions[0].definition,
-        dueDate: new Date().toISOString(),
-        interval: 1
-      });
+            saveAndRender();
+            wordInput.value = '';
+            addBtn.textContent = 'Add';
+            addBtn.disabled = false;
+        }
 
-      saveCards();
-      status.innerText = `Added "${word}"!`;
-      input.value = '';
-      loadNextCard();
-    } catch (err) {
-      status.innerText = "Could not find definition.";
-    }
-  }
+        function saveAndRender() {
+            localStorage.setItem('srs_cards', JSON.stringify(cards));
+            renderNextCard();
+        }
 
-  function getDueCards() {
-    const now = new Date();
-    return cards.filter(c => new Date(c.dueDate) <= now);
-  }
+        function renderNextCard() {
+            const now = Date.now();
+            const dueCards = cards.filter(c => c.dueDate <= now);
 
-  function loadNextCard() {
-    const due = getDueCards();
-    const cardEl = document.getElementById('flashcard');
-    const frontEl = document.getElementById('frontWord');
-    const posEl = document.getElementById('posTag');
-    const backEl = document.getElementById('backDef');
-    const showBtn = document.getElementById('showBtn');
-    const ratingBtns = document.getElementById('ratingBtns');
+            statsDisplay.textContent = `Total Cards: ${cards.length} | Due Today: ${dueCards.length}`;
 
-    cardEl.classList.remove('flipped');
-    ratingBtns.classList.add('hidden');
+            if (dueCards.length === 0) {
+                currentCardIndex = null;
+                cardContainer.classList.remove('revealed');
+                cardContent.innerHTML = `<div class="empty-state">All done for now! 🎉</div>`;
+                return;
+            }
 
-    if (due.length === 0) {
-      frontEl.innerText = "All done for now! 🎉";
-      showBtn.classList.add('hidden');
-      currentCard = null;
-    } else {
-      currentCard = due[0];
-      frontEl.innerText = currentCard.word;
-      posEl.innerText = currentCard.pos;
-      backEl.innerText = currentCard.def;
-      showBtn.classList.remove('hidden');
-    }
-    updateStats();
-  }
+            // Find actual index of the first due card
+            currentCardIndex = cards.indexOf(dueCards[0]);
+            const card = cards[currentCardIndex];
 
-  function showAnswer() {
-    triggerHaptic();
-    document.getElementById('flashcard').classList.add('flipped');
-    document.getElementById('showBtn').classList.add('hidden');
-    document.getElementById('ratingBtns').classList.remove('hidden');
-  }
+            cardContainer.classList.remove('revealed');
+            cardContent.innerHTML = `
+                <h2 class="word-title">${card.word}</h2>
+                <div class="word-meta">${card.partOfSpeech ? '(' + card.partOfSpeech + ')' : ''}</div>
+                <div class="word-definition">${card.definition}</div>
+                <div class="reveal-prompt">Tap card to reveal definition</div>
+            `;
+        }
 
-  function rateCard(rating) {
-    triggerHaptic();
-    if (!currentCard) return;
+        function reviewCard(rating) {
+            if (currentCardIndex === null) return;
+            let card = cards[currentCardIndex];
 
-    let mult = rating === 1 ? 1 : (rating === 2 ? 2.5 : 4.0);
-    currentCard.interval = Math.round((currentCard.interval || 1) * mult);
-    
-    const nextDate = new Date();
-    nextDate.setDate(nextDate.getDate() + (rating === 1 ? 1 : currentCard.interval));
-    currentCard.dueDate = nextDate.toISOString();
+            // Simple SRS interval scaling based on button rating (0: Again, 1: Hard, 2: Good, 3: Easy)
+            if (rating === 0) {
+                card.interval = 1;
+                card.dueDate = Date.now() + (1 * 60 * 1000); // 1 minute retry
+            } else if (rating === 1) {
+                card.interval = Math.max(1, card.interval * 1.2);
+                card.dueDate = Date.now() + (card.interval * 24 * 60 * 60 * 1000);
+            } else if (rating === 2) {
+                card.interval = Math.max(1, card.interval * 2);
+                card.dueDate = Date.now() + (card.interval * 24 * 60 * 60 * 1000);
+            } else if (rating === 3) {
+                card.interval = Math.max(1, card.interval * 3.5);
+                card.dueDate = Date.now() + (card.interval * 24 * 60 * 60 * 1000);
+            }
 
-    saveCards();
-    loadNextCard();
-  }
+            saveAndRender();
+        }
 
-  function updateStats() {
-    document.getElementById('stats').innerText = `Total Cards: ${cards.length} | Due Today: ${getDueCards().length}`;
-  }
-
-  loadNextCard();
-</script>
+        renderNextCard();
+    </script>
 </body>
 </html>
