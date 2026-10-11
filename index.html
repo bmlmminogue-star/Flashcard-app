@@ -19,7 +19,7 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: var(--bg);
             color: var(--text);
             margin: 0;
@@ -49,11 +49,6 @@
             margin: 0;
         }
 
-        .header-actions {
-            display: flex;
-            gap: 8px;
-        }
-
         .btn-reset {
             background: #e2e8f0;
             color: #334155;
@@ -63,10 +58,6 @@
             font-weight: 600;
             font-size: 0.8rem;
             cursor: pointer;
-        }
-
-        .btn-reset:hover {
-            background: #cbd5e1;
         }
 
         .input-group {
@@ -84,10 +75,6 @@
             background: var(--card-bg);
         }
 
-        input:focus, textarea:focus {
-            border-color: var(--primary);
-        }
-
         .btn-add {
             background: var(--primary);
             color: white;
@@ -95,7 +82,6 @@
             padding: 0 20px;
             border-radius: var(--radius);
             font-weight: 600;
-            font-size: 1rem;
             cursor: pointer;
         }
 
@@ -125,14 +111,7 @@
             font-size: 1.8rem;
             font-weight: 700;
             margin: 0 0 8px 0;
-            text-transform: capitalize;
-        }
-
-        .word-meta {
-            color: var(--text-secondary);
-            font-style: italic;
-            margin-bottom: 12px;
-            font-size: 0.95rem;
+            text-transform: lowercase;
         }
 
         .word-definition {
@@ -218,9 +197,7 @@
     <div class="container">
         <header>
             <h1>Vocabulary SRS</h1>
-            <div class="header-actions">
-                <button class="btn-reset" onclick="resetSession()">🔄 Practice All</button>
-            </div>
+            <button class="btn-reset" onclick="resetSession()">🔄 Practice All</button>
         </header>
 
         <div class="input-group">
@@ -245,6 +222,7 @@
 
     <script>
         let cards = JSON.parse(localStorage.getItem('srs_cards')) || [];
+        let dictionaryData = null;
         let currentCardIndex = null;
         let practiceMode = false;
 
@@ -264,6 +242,20 @@
             }
         });
 
+        async function loadDictionary() {
+            if (dictionaryData) return dictionaryData;
+            try {
+                // Fetches directly from the raw dictionary repository link
+                const res = await fetch('https://raw.githubusercontent.com/adambom/dictionary/master/dictionary.json');
+                if (res.ok) {
+                    dictionaryData = await res.json();
+                }
+            } catch (err) {
+                console.log("Dictionary fetch error, fallback to manual entry enabled");
+            }
+            return dictionaryData;
+        }
+
         async function addNewWord() {
             const word = wordInput.value.trim().toLowerCase();
             if (!word) return;
@@ -272,24 +264,15 @@
             addBtn.disabled = true;
 
             let definition = "";
-            let partOfSpeech = "";
+            const dict = await loadDictionary();
 
-            try {
-                const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
-                if (response.ok) {
-                    const data = await response.json();
-                    const entry = data[0];
-                    partOfSpeech = entry.meanings[0]?.partOfSpeech || "";
-                    definition = entry.meanings[0]?.definitions[0]?.definition || "";
-                }
-            } catch (err) {
-                console.log("Auto-fetch error, switching to manual entry");
+            if (dict) {
+                definition = dict[word] || dict[word.toLowerCase()] || "";
             }
 
             cards.push({
                 word: word,
                 definition: definition,
-                partOfSpeech: partOfSpeech,
                 interval: 0,
                 dueDate: Date.now()
             });
@@ -332,13 +315,12 @@
             let defHtml = card.definition ? 
                 `<div class="word-definition">${card.definition}</div>` : 
                 `<div class="word-definition def-edit-box">
-                    <textarea id="customDefInput" placeholder="Enter definition..." rows="3"></textarea>
+                    <textarea id="customDefInput" placeholder="Definition not found in database. Enter manually..." rows="3"></textarea>
                     <button class="btn-save-def" onclick="saveCustomDef(event)">Save Definition</button>
                  </div>`;
 
             cardContent.innerHTML = `
                 <h2 class="word-title">${card.word}</h2>
-                <div class="word-meta">${card.partOfSpeech ? '(' + card.partOfSpeech + ')' : ''}</div>
                 ${defHtml}
                 <div class="reveal-prompt">Tap card to reveal answer</div>
             `;
@@ -360,16 +342,16 @@
 
             if (rating === 0) {
                 card.interval = 0;
-                card.dueDate = Date.now() + (1 * 60 * 1000); // 1 min
+                card.dueDate = Date.now() + (1 * 60 * 1000);
             } else if (rating === 1) {
                 card.interval = Math.max(1, card.interval * 1.2);
-                card.dueDate = Date.now() + (card.interval * 12 * 60 * 60 * 1000);
+                card.dueDate = Date.now() + (12 * 60 * 60 * 1000);
             } else if (rating === 2) {
                 card.interval = Math.max(1, card.interval * 2);
-                card.dueDate = Date.now() + (card.interval * 24 * 60 * 60 * 1000);
+                card.dueDate = Date.now() + (24 * 60 * 60 * 1000);
             } else if (rating === 3) {
                 card.interval = Math.max(1, card.interval * 3.5);
-                card.dueDate = Date.now() + (card.interval * 3 * 24 * 60 * 60 * 1000);
+                card.dueDate = Date.now() + (3 * 24 * 60 * 60 * 1000);
             }
 
             saveAndRender();
