@@ -45,18 +45,28 @@
         }
 
         h1 {
-            font-size: 1.5rem;
+            font-size: 1.4rem;
             margin: 0;
         }
 
-        .streak {
-            background: #fff7ed;
-            color: #c2410c;
+        .header-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-reset {
+            background: #e2e8f0;
+            color: #334155;
+            border: none;
             padding: 6px 12px;
             border-radius: 20px;
             font-weight: 600;
-            font-size: 0.85rem;
-            border: 1px solid #ffedd5;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+
+        .btn-reset:hover {
+            background: #cbd5e1;
         }
 
         .input-group {
@@ -64,7 +74,7 @@
             gap: 8px;
         }
 
-        input {
+        input, textarea {
             flex: 1;
             padding: 12px 16px;
             border: 1px solid var(--border);
@@ -74,11 +84,11 @@
             background: var(--card-bg);
         }
 
-        input:focus {
+        input:focus, textarea:focus {
             border-color: var(--primary);
         }
 
-        button {
+        .btn-add {
             background: var(--primary);
             color: white;
             border: none;
@@ -89,21 +99,17 @@
             cursor: pointer;
         }
 
-        button:active {
-            background: var(--primary-hover);
-        }
-
         .card-container {
             background: var(--card-bg);
             border: 1px solid var(--border);
             border-radius: var(--radius);
             padding: 24px;
-            min-height: 240px;
+            min-height: 220px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-            position: relative;
+            cursor: pointer;
         }
 
         .card-content {
@@ -119,17 +125,18 @@
             font-size: 1.8rem;
             font-weight: 700;
             margin: 0 0 8px 0;
+            text-transform: capitalize;
         }
 
         .word-meta {
             color: var(--text-secondary);
             font-style: italic;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
             font-size: 0.95rem;
         }
 
         .word-definition {
-            font-size: 1.1rem;
+            font-size: 1.05rem;
             line-height: 1.5;
             color: var(--text);
             display: none;
@@ -141,7 +148,7 @@
 
         .reveal-prompt {
             color: var(--text-secondary);
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             margin-top: 12px;
         }
 
@@ -163,8 +170,11 @@
         .btn-srs {
             padding: 10px 4px;
             font-size: 0.8rem;
+            border: none;
             border-radius: 8px;
             font-weight: 600;
+            color: white;
+            cursor: pointer;
         }
 
         .btn-again { background: #ef4444; }
@@ -183,6 +193,24 @@
             color: var(--text-secondary);
             font-size: 1.1rem;
         }
+
+        .def-edit-box {
+            width: 100%;
+            margin-top: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .btn-save-def {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -190,12 +218,14 @@
     <div class="container">
         <header>
             <h1>Vocabulary SRS</h1>
-            <div class="streak" id="streakCounter">🔥 0 Days</div>
+            <div class="header-actions">
+                <button class="btn-reset" onclick="resetSession()">🔄 Practice All</button>
+            </div>
         </header>
 
         <div class="input-group">
             <input type="text" id="wordInput" placeholder="Add a new word..." autocomplete="off">
-            <button id="addBtn">Add</button>
+            <button class="btn-add" id="addBtn">Add</button>
         </div>
 
         <div class="card-container" id="cardContainer">
@@ -203,19 +233,20 @@
                 <div class="empty-state">All done for now! 🎉</div>
             </div>
             <div class="actions" id="srsActions">
-                <button class="btn-srs btn-again" onclick="reviewCard(0)">Again</button>
-                <button class="btn-srs btn-hard" onclick="reviewCard(1)">Hard</button>
-                <button class="btn-srs btn-good" onclick="reviewCard(2)">Good</button>
-                <button class="btn-srs btn-easy" onclick="reviewCard(3)">Easy</button>
+                <button class="btn-srs btn-again" onclick="reviewCard(0, event)">Again</button>
+                <button class="btn-srs btn-hard" onclick="reviewCard(1, event)">Hard</button>
+                <button class="btn-srs btn-good" onclick="reviewCard(2, event)">Good</button>
+                <button class="btn-srs btn-easy" onclick="reviewCard(3, event)">Easy</button>
             </div>
         </div>
 
-        <div class="stats" id="statsDisplay">Total Cards: 0 | Due Today: 0</div>
+        <div class="stats" id="statsDisplay">Total Cards: 0 | Ready to Review: 0</div>
     </div>
 
     <script>
         let cards = JSON.parse(localStorage.getItem('srs_cards')) || [];
         let currentCardIndex = null;
+        let practiceMode = false;
 
         const wordInput = document.getElementById('wordInput');
         const addBtn = document.getElementById('addBtn');
@@ -225,8 +256,10 @@
 
         addBtn.addEventListener('click', addNewWord);
         wordInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') addNewWord(); });
+
         cardContainer.addEventListener('click', (e) => {
-            if (!cardContainer.classList.contains('revealed') && cards.length > 0 && currentCardIndex !== null) {
+            if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'BUTTON') return;
+            if (!cardContainer.classList.contains('revealed') && currentCardIndex !== null) {
                 cardContainer.classList.add('revealed');
             }
         });
@@ -235,10 +268,10 @@
             const word = wordInput.value.trim().toLowerCase();
             if (!word) return;
 
-            addBtn.textContent = 'Fetching...';
+            addBtn.textContent = '...';
             addBtn.disabled = true;
 
-            let definition = "No definition found.";
+            let definition = "";
             let partOfSpeech = "";
 
             try {
@@ -247,12 +280,10 @@
                     const data = await response.json();
                     const entry = data[0];
                     partOfSpeech = entry.meanings[0]?.partOfSpeech || "";
-                    definition = entry.meanings[0]?.definitions[0]?.definition || "Definition not available.";
-                } else {
-                    definition = prompt(`Could not auto-fetch definition for "${word}". Enter definition manually:`) || "Custom word";
+                    definition = entry.meanings[0]?.definitions[0]?.definition || "";
                 }
             } catch (err) {
-                definition = prompt(`Network error fetching "${word}". Enter definition manually:`) || "Custom word";
+                console.log("Auto-fetch error, switching to manual entry");
             }
 
             cards.push({
@@ -260,7 +291,6 @@
                 definition: definition,
                 partOfSpeech: partOfSpeech,
                 interval: 0,
-                repetition: 0,
                 dueDate: Date.now()
             });
 
@@ -275,49 +305,71 @@
             renderNextCard();
         }
 
+        function resetSession() {
+            practiceMode = true;
+            renderNextCard();
+        }
+
         function renderNextCard() {
             const now = Date.now();
-            const dueCards = cards.filter(c => c.dueDate <= now);
+            let dueCards = practiceMode ? cards : cards.filter(c => c.dueDate <= now);
 
-            statsDisplay.textContent = `Total Cards: ${cards.length} | Due Today: ${dueCards.length}`;
+            statsDisplay.textContent = `Total Cards: ${cards.length} | Ready: ${dueCards.length} ${practiceMode ? '(Practice Mode)' : ''}`;
 
             if (dueCards.length === 0) {
                 currentCardIndex = null;
+                practiceMode = false;
                 cardContainer.classList.remove('revealed');
-                cardContent.innerHTML = `<div class="empty-state">All done for now! 🎉</div>`;
+                cardContent.innerHTML = `<div class="empty-state">All done for now! 🎉<br><br><small>Tap "Practice All" to review anytime.</small></div>`;
                 return;
             }
 
-            // Find actual index of the first due card
             currentCardIndex = cards.indexOf(dueCards[0]);
             const card = cards[currentCardIndex];
 
             cardContainer.classList.remove('revealed');
+
+            let defHtml = card.definition ? 
+                `<div class="word-definition">${card.definition}</div>` : 
+                `<div class="word-definition def-edit-box">
+                    <textarea id="customDefInput" placeholder="Enter definition..." rows="3"></textarea>
+                    <button class="btn-save-def" onclick="saveCustomDef(event)">Save Definition</button>
+                 </div>`;
+
             cardContent.innerHTML = `
                 <h2 class="word-title">${card.word}</h2>
                 <div class="word-meta">${card.partOfSpeech ? '(' + card.partOfSpeech + ')' : ''}</div>
-                <div class="word-definition">${card.definition}</div>
-                <div class="reveal-prompt">Tap card to reveal definition</div>
+                ${defHtml}
+                <div class="reveal-prompt">Tap card to reveal answer</div>
             `;
         }
 
-        function reviewCard(rating) {
+        function saveCustomDef(e) {
+            e.stopPropagation();
+            const text = document.getElementById('customDefInput').value.trim();
+            if (text && currentCardIndex !== null) {
+                cards[currentCardIndex].definition = text;
+                saveAndRender();
+            }
+        }
+
+        function reviewCard(rating, e) {
+            e.stopPropagation();
             if (currentCardIndex === null) return;
             let card = cards[currentCardIndex];
 
-            // Simple SRS interval scaling based on button rating (0: Again, 1: Hard, 2: Good, 3: Easy)
             if (rating === 0) {
-                card.interval = 1;
-                card.dueDate = Date.now() + (1 * 60 * 1000); // 1 minute retry
+                card.interval = 0;
+                card.dueDate = Date.now() + (1 * 60 * 1000); // 1 min
             } else if (rating === 1) {
                 card.interval = Math.max(1, card.interval * 1.2);
-                card.dueDate = Date.now() + (card.interval * 24 * 60 * 60 * 1000);
+                card.dueDate = Date.now() + (card.interval * 12 * 60 * 60 * 1000);
             } else if (rating === 2) {
                 card.interval = Math.max(1, card.interval * 2);
                 card.dueDate = Date.now() + (card.interval * 24 * 60 * 60 * 1000);
             } else if (rating === 3) {
                 card.interval = Math.max(1, card.interval * 3.5);
-                card.dueDate = Date.now() + (card.interval * 24 * 60 * 60 * 1000);
+                card.dueDate = Date.now() + (card.interval * 3 * 24 * 60 * 60 * 1000);
             }
 
             saveAndRender();
